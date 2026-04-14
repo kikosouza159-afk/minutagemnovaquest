@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dashboard Bilhetagem Locator</title>
+    <title>Dashboard Bilhetagem Locator - V2</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -52,7 +52,7 @@
 
         .filtros {
             display: grid;
-            grid-template-columns: repeat(4, minmax(180px, 1fr));
+            grid-template-columns: repeat(5, minmax(180px, 1fr));
             gap: 12px;
             margin-bottom: 20px;
         }
@@ -104,6 +104,7 @@
             border-radius: 14px;
             padding: 18px;
             box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
         }
 
         .card-titulo {
@@ -116,35 +117,38 @@
             font-size: 28px;
             font-weight: bold;
             color: #f8fafc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .graficos {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 20px;
-    align-items: stretch;
-}
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+            align-items: stretch;
+        }
 
-.grafico-box {
-    background: #1e293b;
-    border-radius: 14px;
-    padding: 18px;
-    height: 380px;
-    overflow: hidden;
-}
+        .grafico-box {
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 18px;
+            height: 380px;
+            overflow: hidden;
+        }
 
-.grafico-area {
-    position: relative;
-    height: 300px;
-    width: 100%;
-}
+        .grafico-area {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
 
         .grafico-box canvas {
             width: 100% !important;
             height: 300px !important;
             display: block;
-}
+        }
 
         .grafico-titulo {
             font-size: 16px;
@@ -196,11 +200,21 @@
             font-size: 12px;
         }
 
+        @media (max-width: 1300px) {
+            .filtros {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
         @media (max-width: 1100px) {
             .cards,
             .graficos,
             .filtros {
                 grid-template-columns: 1fr;
+            }
+
+            .card-valor {
+                white-space: normal;
             }
         }
     </style>
@@ -231,8 +245,29 @@
             </div>
 
             <div class="filtro-box">
-                <label for="filtroData">Data</label>
-                <input type="date" id="filtroData" />
+                <label for="filtroMes">Mês</label>
+                <select id="filtroMes">
+                    <option value="">Todos</option>
+                    <option value="01">Janeiro</option>
+                    <option value="02">Fevereiro</option>
+                    <option value="03">Março</option>
+                    <option value="04">Abril</option>
+                    <option value="05">Maio</option>
+                    <option value="06">Junho</option>
+                    <option value="07">Julho</option>
+                    <option value="08">Agosto</option>
+                    <option value="09">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+            </div>
+
+            <div class="filtro-box">
+                <label for="filtroAno">Ano</label>
+                <select id="filtroAno">
+                    <option value="">Todos</option>
+                </select>
             </div>
 
             <div class="filtro-box">
@@ -260,21 +295,21 @@
             </div>
         </div>
 
-<div class="graficos">
-    <div class="grafico-box">
-        <div class="grafico-titulo">Evolução de Calls por Data</div>
-        <div class="grafico-area">
-            <canvas id="graficoCalls"></canvas>
-        </div>
-    </div>
+        <div class="graficos">
+            <div class="grafico-box">
+                <div class="grafico-titulo">Evolução de Calls por Data</div>
+                <div class="grafico-area">
+                    <canvas id="graficoCalls"></canvas>
+                </div>
+            </div>
 
-    <div class="grafico-box">
-        <div class="grafico-titulo">Evolução de Valor por Data</div>
-        <div class="grafico-area">
-            <canvas id="graficoValue"></canvas>
+            <div class="grafico-box">
+                <div class="grafico-titulo">Evolução de Valor por Data</div>
+                <div class="grafico-area">
+                    <canvas id="graficoValue"></canvas>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
         <div class="tabela-box">
             <div class="grafico-titulo">Detalhamento</div>
@@ -324,18 +359,54 @@
             document.getElementById("statusAtualizacao").textContent = texto;
         }
 
+        function parseDateSafe(dateStr) {
+            if (!dateStr) return null;
+
+            const data = new Date(dateStr);
+
+            if (!isNaN(data.getTime())) {
+                return data;
+            }
+
+            if (typeof dateStr === "string" && dateStr.includes("/")) {
+                const partes = dateStr.split("/");
+                if (partes.length === 3) {
+                    const [dia, mes, ano] = partes;
+                    const dataBr = new Date(`${ano}-${mes}-${dia}`);
+                    if (!isNaN(dataBr.getTime())) {
+                        return dataBr;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         function preencherFiltros(dados) {
             const flowSelect = document.getElementById("filtroFlow");
             const campaignSelect = document.getElementById("filtroCampaign");
+            const anoSelect = document.getElementById("filtroAno");
 
             const valorFlowAtual = flowSelect.value;
             const valorCampaignAtual = campaignSelect.value;
+            const valorAnoAtual = anoSelect.value;
 
             const flows = [...new Set(dados.map(x => x.flow).filter(x => x))].sort();
-            const campaigns = [...new Set(dados.map(x => x.campaignId).filter(x => x !== "" && x !== null))].sort((a, b) => Number(a) - Number(b));
+
+            const campaigns = [...new Set(
+                dados.map(x => x.campaignId).filter(x => x !== "" && x !== null && x !== undefined)
+            )].sort((a, b) => Number(a) - Number(b));
+
+            const anos = [...new Set(
+                dados
+                    .map(x => parseDateSafe(x.date))
+                    .filter(x => x)
+                    .map(x => x.getFullYear())
+            )].sort((a, b) => a - b);
 
             flowSelect.innerHTML = '<option value="">Todos</option>';
             campaignSelect.innerHTML = '<option value="">Todos</option>';
+            anoSelect.innerHTML = '<option value="">Todos</option>';
 
             flows.forEach(flow => {
                 const op = document.createElement("option");
@@ -351,6 +422,13 @@
                 campaignSelect.appendChild(op);
             });
 
+            anos.forEach(ano => {
+                const op = document.createElement("option");
+                op.value = String(ano);
+                op.textContent = String(ano);
+                anoSelect.appendChild(op);
+            });
+
             if ([...flowSelect.options].some(op => op.value === valorFlowAtual)) {
                 flowSelect.value = valorFlowAtual;
             }
@@ -358,18 +436,35 @@
             if ([...campaignSelect.options].some(op => op.value === valorCampaignAtual)) {
                 campaignSelect.value = valorCampaignAtual;
             }
+
+            if ([...anoSelect.options].some(op => op.value === valorAnoAtual)) {
+                anoSelect.value = valorAnoAtual;
+            }
         }
 
         function filtrarDados() {
             const flow = document.getElementById("filtroFlow").value;
             const campaign = document.getElementById("filtroCampaign").value;
-            const data = document.getElementById("filtroData").value;
+            const mes = document.getElementById("filtroMes").value;
+            const ano = document.getElementById("filtroAno").value;
 
             return dadosOriginais.filter(item => {
+                const dataItem = parseDateSafe(item.date);
+
+                let mesItem = "";
+                let anoItem = "";
+
+                if (dataItem) {
+                    mesItem = String(dataItem.getMonth() + 1).padStart(2, "0");
+                    anoItem = String(dataItem.getFullYear());
+                }
+
                 const okFlow = !flow || String(item.flow) === String(flow);
                 const okCampaign = !campaign || String(item.campaignId) === String(campaign);
-                const okData = !data || String(item.date) === String(data);
-                return okFlow && okCampaign && okData;
+                const okMes = !mes || mesItem === mes;
+                const okAno = !ano || anoItem === ano;
+
+                return okFlow && okCampaign && okMes && okAno;
             });
         }
 
@@ -385,29 +480,41 @@
             document.getElementById("kpiValue").textContent = formatMoeda(totalValue);
         }
 
+        function formatarLabelData(dataTexto) {
+            const data = parseDateSafe(dataTexto);
+            if (!data) return dataTexto || "Sem data";
+            return data.toLocaleDateString("pt-BR");
+        }
+
         function agruparPorData(dados) {
             const mapa = {};
 
             dados.forEach(item => {
-                const data = item.date || "Sem data";
+                const chave = item.date || "Sem data";
 
-                if (!mapa[data]) {
-                    mapa[data] = {
+                if (!mapa[chave]) {
+                    mapa[chave] = {
                         totalCalls: 0,
                         totalValue: 0
                     };
                 }
 
-                mapa[data].totalCalls += Number(item.totalCalls || 0);
-                mapa[data].totalValue += Number(item.totalValue || 0);
+                mapa[chave].totalCalls += Number(item.totalCalls || 0);
+                mapa[chave].totalValue += Number(item.totalValue || 0);
             });
 
-            const datas = Object.keys(mapa).sort();
+            const datasOrdenadas = Object.keys(mapa).sort((a, b) => {
+                const dataA = parseDateSafe(a);
+                const dataB = parseDateSafe(b);
+
+                if (dataA && dataB) return dataA - dataB;
+                return String(a).localeCompare(String(b));
+            });
 
             return {
-                labels: datas,
-                calls: datas.map(d => mapa[d].totalCalls),
-                values: datas.map(d => mapa[d].totalValue)
+                labels: datasOrdenadas.map(d => formatarLabelData(d)),
+                calls: datasOrdenadas.map(d => mapa[d].totalCalls),
+                values: datasOrdenadas.map(d => mapa[d].totalValue)
             };
         }
 
@@ -429,69 +536,69 @@
             const agrupado = agruparPorData(dados);
 
             chartCalls = new Chart(document.getElementById("graficoCalls"), {
-    type: "line",
-    data: {
-        labels: agrupado.labels,
-        datasets: [{
-            label: "Total Calls",
-            data: agrupado.calls,
-            tension: 0.25,
-            borderWidth: 2
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        resizeDelay: 300,
-        plugins: {
-            legend: { labels: { color: "#e2e8f0" } }
-        },
-        scales: {
-            x: {
-                ticks: { color: "#cbd5e1" },
-                grid: { color: "rgba(255,255,255,0.08)" }
-            },
-            y: {
-                beginAtZero: true,
-                ticks: { color: "#cbd5e1" },
-                grid: { color: "rgba(255,255,255,0.08)" }
-            }
-        }
-    }
-});
+                type: "line",
+                data: {
+                    labels: agrupado.labels,
+                    datasets: [{
+                        label: "Total Calls",
+                        data: agrupado.calls,
+                        tension: 0.25,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    resizeDelay: 300,
+                    plugins: {
+                        legend: { labels: { color: "#e2e8f0" } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: "#cbd5e1" },
+                            grid: { color: "rgba(255,255,255,0.08)" }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: "#cbd5e1" },
+                            grid: { color: "rgba(255,255,255,0.08)" }
+                        }
+                    }
+                }
+            });
 
             chartValue = new Chart(document.getElementById("graficoValue"), {
-    type: "bar",
-    data: {
-        labels: agrupado.labels,
-        datasets: [{
-            label: "Total Value",
-            data: agrupado.values,
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        resizeDelay: 300,
-        plugins: {
-            legend: { labels: { color: "#e2e8f0" } }
-        },
-        scales: {
-            x: {
-                ticks: { color: "#cbd5e1" },
-                grid: { color: "rgba(255,255,255,0.08)" }
-            },
-            y: {
-                beginAtZero: true,
-                ticks: { color: "#cbd5e1" },
-                grid: { color: "rgba(255,255,255,0.08)" }
-            }
-        }
-    }
-});
+                type: "bar",
+                data: {
+                    labels: agrupado.labels,
+                    datasets: [{
+                        label: "Total Value",
+                        data: agrupado.values,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    resizeDelay: 300,
+                    plugins: {
+                        legend: { labels: { color: "#e2e8f0" } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: "#cbd5e1" },
+                            grid: { color: "rgba(255,255,255,0.08)" }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: "#cbd5e1" },
+                            grid: { color: "rgba(255,255,255,0.08)" }
+                        }
+                    }
+                }
+            });
         }
 
         function atualizarTabela(dados) {
@@ -509,7 +616,7 @@
             dados.forEach(item => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${item.date || ""}</td>
+                    <td>${formatarLabelData(item.date)}</td>
                     <td>${item.hour ?? ""}</td>
                     <td>${item.campaignId ?? ""}</td>
                     <td>${item.flow || ""}</td>
@@ -534,11 +641,12 @@
         function limparFiltros() {
             document.getElementById("filtroFlow").value = "";
             document.getElementById("filtroCampaign").value = "";
-            document.getElementById("filtroData").value = "";
+            document.getElementById("filtroMes").value = "";
+            document.getElementById("filtroAno").value = "";
             aplicarFiltros();
         }
 
-        async function carregarDados(manterFiltros = true) {
+        async function carregarDados(exibirErroNaTela = false) {
             try {
                 atualizarStatus("Atualizando dados...");
 
@@ -564,21 +672,25 @@
                 ultimaAtualizacao = new Date();
                 atualizarStatus(`Atualizado em ${ultimaAtualizacao.toLocaleTimeString("pt-BR")}`);
             } catch (erro) {
-                console.error(erro);
+                console.error("Falha ao atualizar dados:", erro);
                 atualizarStatus("Erro ao atualizar dados");
-                alert("Erro ao carregar o dashboard: " + erro.message);
+
+                if (exibirErroNaTela) {
+                    alert("Erro ao carregar o dashboard: " + erro.message);
+                }
             }
         }
 
         document.getElementById("filtroFlow").addEventListener("change", aplicarFiltros);
         document.getElementById("filtroCampaign").addEventListener("change", aplicarFiltros);
-        document.getElementById("filtroData").addEventListener("change", aplicarFiltros);
+        document.getElementById("filtroMes").addEventListener("change", aplicarFiltros);
+        document.getElementById("filtroAno").addEventListener("change", aplicarFiltros);
 
-        carregarDados();
+        carregarDados(true);
 
         setInterval(() => {
-            carregarDados(true);
-        }, 30000);
+            carregarDados(false);
+        }, 60000);
     </script>
 </body>
 </html>
